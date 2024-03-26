@@ -11,7 +11,7 @@ const { deployDiamond } = require('../scripts/deploy.js')
 
 const { assert } = require('chai')
 
-describe('DiamondTest', async function () {
+describe('TokenTest', async function () {
   let diamondAddress
   let diamondCutFacet
   let diamondLoupeFacet
