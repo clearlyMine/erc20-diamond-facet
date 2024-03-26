@@ -1,1 +1,3 @@
 *.js
+artifacts/
+cache/
