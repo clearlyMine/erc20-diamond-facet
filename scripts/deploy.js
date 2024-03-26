@@ -10,22 +10,22 @@ async function deployDiamond () {
   // deploy DiamondCutFacet
   const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet')
   const diamondCutFacet = await DiamondCutFacet.deploy()
-  await diamondCutFacet.deployed()
-  console.log('DiamondCutFacet deployed:', diamondCutFacet.address)
+  await diamondCutFacet.waitForDeployment()
+  console.log('DiamondCutFacet deployed:', diamondCutFacet.target)
 
   // deploy Diamond
   const Diamond = await ethers.getContractFactory('Diamond')
-  const diamond = await Diamond.deploy(contractOwner.address, diamondCutFacet.address)
-  await diamond.deployed()
-  console.log('Diamond deployed:', diamond.address)
+  const diamond = await Diamond.deploy(contractOwner.address, diamondCutFacet.target)
+  await diamond.waitForDeployment()
+  console.log('Diamond deployed:', diamond.target)
 
   // deploy DiamondInit
   // DiamondInit provides a function that is called when the diamond is upgraded to initialize state variables
   // Read about how the diamondCut function works here: https://eips.ethereum.org/EIPS/eip-2535#addingreplacingremoving-functions
   const DiamondInit = await ethers.getContractFactory('DiamondInit')
   const diamondInit = await DiamondInit.deploy()
-  await diamondInit.deployed()
-  console.log('DiamondInit deployed:', diamondInit.address)
+  await diamondInit.waitForDeployment()
+  console.log('DiamondInit deployed:', diamondInit.target)
 
   // deploy facets
   console.log('')
@@ -40,10 +40,10 @@ async function deployDiamond () {
   for (const FacetName of FacetNames) {
     const Facet = await ethers.getContractFactory(FacetName)
     const facet = await Facet.deploy()
-    await facet.deployed()
-    console.log(`${FacetName} deployed: ${facet.address}`)
+    await facet.waitForDeployment()
+    console.log(`${FacetName} deployed: ${facet.target}`)
     cut.push({
-      facetAddress: facet.address,
+      facetAddress: facet.target,
       action: FacetCutAction.Add,
       functionSelectors: getSelectors(facet)
     })
@@ -52,7 +52,7 @@ async function deployDiamond () {
   // upgrade diamond with facets
   console.log('')
   console.log('Diamond Cut:', cut)
-  const diamondCut = await ethers.getContractAt('IDiamondCut', diamond.address)
+  const diamondCut = await ethers.getContractAt('IDiamondCut', diamond.target)
   let tx
   let receipt
   // call to init function
@@ -61,15 +61,15 @@ async function deployDiamond () {
     'MMM',
     18,
   ]);
-  tx = await diamondCut.diamondCut(cut, diamondInit.address, functionCall)
+  tx = await diamondCut.diamondCut(cut, diamondInit.target, functionCall)
   console.log('Diamond cut tx: ', tx.hash)
   receipt = await tx.wait()
   if (!receipt.status) {
     throw Error(`Diamond upgrade failed: ${tx.hash}`)
   }
   console.log('Completed diamond cut')
-
-  return diamond.address
+  
+  return diamond.target
 }
 
 // We recommend this pattern to be able to use async/await everywhere

@@ -36,16 +36,16 @@ describe('DiamondTest', async function () {
     }
     let selectors = getSelectors(diamondCutFacet)
     result = await diamondLoupeFacet.facetFunctionSelectors(addresses[0])
-    assert.sameMembers(result, selectors)
+    assert.sameMembers([...result], selectors)
     selectors = getSelectors(diamondLoupeFacet)
     result = await diamondLoupeFacet.facetFunctionSelectors(addresses[1])
-    assert.sameMembers(result, selectors)
+    assert.sameMembers([...result], selectors)
     selectors = getSelectors(ownershipFacet)
     result = await diamondLoupeFacet.facetFunctionSelectors(addresses[2])
-    assert.sameMembers(result, selectors)
+    assert.sameMembers([...result], selectors)
     selectors = getSelectors(tokenFacet)
     result = await diamondLoupeFacet.facetFunctionSelectors(addresses[3])
-    assert.sameMembers(result, selectors)
+    assert.sameMembers([...result], selectors)
   })
 
   it('Deployment should assign the total supply of tokens to the owner', async function () {

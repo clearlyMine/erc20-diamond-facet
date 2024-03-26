@@ -52,16 +52,16 @@ describe('Cache bug test', async () => {
     diamondLoupeFacet = await ethers.getContractAt('DiamondLoupeFacet', diamondAddress)
     const Test1Facet = await ethers.getContractFactory('Test1Facet')
     test1Facet = await Test1Facet.deploy()
-    await test1Facet.deployed()
+    await test1Facet.waitForDeployment()
 
     // add functions
     tx = await diamondCutFacet.diamondCut([
       {
-        facetAddress: test1Facet.address,
+        facetAddress: test1Facet.target,
         action: FacetCutAction.Add,
         functionSelectors: selectors
       }
-    ], ethers.constants.AddressZero, '0x', { gasLimit: 800000 })
+    ], ethers.ZeroAddress, '0x', { gasLimit: 800000 })
     receipt = await tx.wait()
     if (!receipt.status) {
       throw Error(`Diamond upgrade failed: ${tx.hash}`)
@@ -76,11 +76,11 @@ describe('Cache bug test', async () => {
     ]
     tx = await diamondCutFacet.diamondCut([
       {
-        facetAddress: ethers.constants.AddressZero,
+        facetAddress: ethers.ZeroAddress,
         action: FacetCutAction.Remove,
         functionSelectors: selectors
       }
-    ], ethers.constants.AddressZero, '0x', { gasLimit: 800000 })
+    ], ethers.ZeroAddress, '0x', { gasLimit: 800000 })
     receipt = await tx.wait()
     if (!receipt.status) {
       throw Error(`Diamond upgrade failed: ${tx.hash}`)
@@ -89,7 +89,7 @@ describe('Cache bug test', async () => {
 
   it('should not exhibit the cache bug', async () => {
     // Get the test1Facet's registered functions
-    let selectors = await diamondLoupeFacet.facetFunctionSelectors(test1Facet.address)
+    let selectors = await diamondLoupeFacet.facetFunctionSelectors(test1Facet.target)
 
     // Check individual correctness
     assert.isTrue(selectors.includes(sel0), 'Does not contain sel0')

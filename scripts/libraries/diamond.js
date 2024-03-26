@@ -4,10 +4,10 @@ const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 }
 
 // get function selectors from ABI
 function getSelectors (contract) {
-  const signatures = Object.keys(contract.interface.functions)
+  const signatures = Object.values(contract.interface.fragments)
   const selectors = signatures.reduce((acc, val) => {
-    if (val !== 'init(bytes)') {
-      acc.push(contract.interface.getSighash(val))
+    if (val.type === 'function' && val.name !== 'init(bytes)') {
+      acc.push(val.selector)
     }
     return acc
   }, [])
@@ -19,8 +19,8 @@ function getSelectors (contract) {
 
 // get function selector from function signature
 function getSelector (func) {
-  const abiInterface = new ethers.utils.Interface([func])
-  return abiInterface.getSighash(ethers.utils.Fragment.from(func))
+  const abiInterface = new ethers.Interface([func])
+  return abiInterface.getFunction(func).selector
 }
 
 // used with getSelectors to remove selectors from an array of selectors
@@ -28,7 +28,7 @@ function getSelector (func) {
 function remove (functionNames) {
   const selectors = this.filter((v) => {
     for (const functionName of functionNames) {
-      if (v === this.contract.interface.getSighash(functionName)) {
+      if (v === this.contract.interface.getFunction(functionName).selector) {
         return false
       }
     }
@@ -45,7 +45,7 @@ function remove (functionNames) {
 function get (functionNames) {
   const selectors = this.filter((v) => {
     for (const functionName of functionNames) {
-      if (v === this.contract.interface.getSighash(functionName)) {
+      if (v === this.contract.interface.getFunction(functionName).selector) {
         return true
       }
     }
@@ -59,8 +59,8 @@ function get (functionNames) {
 
 // remove selectors using an array of signatures
 function removeSelectors (selectors, signatures) {
-  const iface = new ethers.utils.Interface(signatures.map(v => 'function ' + v))
-  const removeSelectors = signatures.map(v => iface.getSighash(v))
+  const iface = new ethers.Interface(signatures.map(v => 'function ' + v))
+  const removeSelectors = signatures.map(v => iface.getFunction(v).selector)
   selectors = selectors.filter(v => !removeSelectors.includes(v))
   return selectors
 }
