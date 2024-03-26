@@ -4,7 +4,12 @@
   "description": "Template for contract projects.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint": "bun run lint:sol && bun run prettier:check",
+    "lint:sol": "forge fmt --check && bun solhint {script,src,test}/**/*.sol",
+    "format": "forge fmt",
+    "prettier:check": "prettier --check \"**/*.{json,md,yml}\" --ignore-path=.prettierignore",
+    "prettier:write": "prettier --write \"**/*.{json,md,yml}\" --ignore-path=.prettierignore",
+    "test": "bunx hardhat test"
   },
   "repository": {
     "type": "git",
