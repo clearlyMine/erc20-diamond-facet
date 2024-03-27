@@ -7,6 +7,11 @@ pragma solidity ^0.8.0;
 /******************************************************************************/
 import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
 
+// Remember to add the loupe functions from DiamondLoupeFacet to the diamond.
+// The loupe functions are required by the EIP2535 Diamonds standard
+
+error InitializationFunctionReverted(address _initializationContractAddress, bytes _calldata);
+
 library LibDiamond {
     bytes32 constant DIAMOND_STORAGE_POSITION = keccak256("diamond.standard.diamond.storage");
 
@@ -79,7 +84,7 @@ library LibDiamond {
             selectorSlot = ds.selectorSlots[selectorCount >> 3];
         }
         // loop through diamond cut
-        for (uint256 facetIndex; facetIndex < _diamondCut.length; facetIndex++) {
+        for (uint256 facetIndex; facetIndex < _diamondCut.length; ) {
             (selectorCount, selectorSlot) = addReplaceRemoveFacetSelectors(
                 selectorCount,
                 selectorSlot,
@@ -87,6 +92,10 @@ library LibDiamond {
                 _diamondCut[facetIndex].action,
                 _diamondCut[facetIndex].functionSelectors
             );
+
+            unchecked {
+                facetIndex++;
+            }
         }
         if (selectorCount != originalSelectorCount) {
             ds.selectorCount = uint16(selectorCount);
@@ -112,13 +121,14 @@ library LibDiamond {
         require(_selectors.length > 0, "LibDiamondCut: No selectors in facet to cut");
         if (_action == IDiamondCut.FacetCutAction.Add) {
             enforceHasContractCode(_newFacetAddress, "LibDiamondCut: Add facet has no code");
-            for (uint256 selectorIndex; selectorIndex < _selectors.length; selectorIndex++) {
+            for (uint256 selectorIndex; selectorIndex < _selectors.length; ) {
                 bytes4 selector = _selectors[selectorIndex];
                 bytes32 oldFacet = ds.facets[selector];
                 require(address(bytes20(oldFacet)) == address(0), "LibDiamondCut: Can't add function that already exists");
                 // add facet for selector
                 ds.facets[selector] = bytes20(_newFacetAddress) | bytes32(_selectorCount);
                 // "_selectorCount & 7" is a gas efficient modulo by eight "_selectorCount % 8" 
+                // " << 5 is the same as multiplying by 32 ( * 32)
                 uint256 selectorInSlotPosition = (_selectorCount & 7) << 5;
                 // clear selector position in slot and add selector
                 _selectorSlot = (_selectorSlot & ~(CLEAR_SELECTOR_MASK >> selectorInSlotPosition)) | (bytes32(selector) >> selectorInSlotPosition);
@@ -129,10 +139,14 @@ library LibDiamond {
                     _selectorSlot = 0;
                 }
                 _selectorCount++;
+
+                unchecked {
+                    selectorIndex++;
+                }
             }
         } else if (_action == IDiamondCut.FacetCutAction.Replace) {
             enforceHasContractCode(_newFacetAddress, "LibDiamondCut: Replace facet has no code");
-            for (uint256 selectorIndex; selectorIndex < _selectors.length; selectorIndex++) {
+            for (uint256 selectorIndex; selectorIndex < _selectors.length; ) {
                 bytes4 selector = _selectors[selectorIndex];
                 bytes32 oldFacet = ds.facets[selector];
                 address oldFacetAddress = address(bytes20(oldFacet));
@@ -142,6 +156,10 @@ library LibDiamond {
                 require(oldFacetAddress != address(0), "LibDiamondCut: Can't replace function that doesn't exist");
                 // replace old facet address
                 ds.facets[selector] = (oldFacet & CLEAR_ADDRESS_MASK) | bytes20(_newFacetAddress);
+
+                unchecked {
+                    selectorIndex++;
+                }
             }
         } else if (_action == IDiamondCut.FacetCutAction.Remove) {
             require(_newFacetAddress == address(0), "LibDiamondCut: Remove facet address must be address(0)");
@@ -149,7 +167,7 @@ library LibDiamond {
             uint256 selectorSlotCount = _selectorCount >> 3;
             // "_selectorCount & 7" is a gas efficient modulo by eight "_selectorCount % 8" 
             uint256 selectorInSlotIndex = _selectorCount & 7;
-            for (uint256 selectorIndex; selectorIndex < _selectors.length; selectorIndex++) {
+            for (uint256 selectorIndex; selectorIndex < _selectors.length; ) {
                 if (_selectorSlot == 0) {
                     // get last selectorSlot
                     selectorSlotCount--;
@@ -170,6 +188,7 @@ library LibDiamond {
                     require(address(bytes20(oldFacet)) != address(this), "LibDiamondCut: Can't remove immutable function");
                     // replace selector with last selector in ds.facets
                     // gets the last selector
+                    // " << 5 is the same as multiplying by 32 ( * 32)
                     lastSelector = bytes4(_selectorSlot << (selectorInSlotIndex << 5));
                     if (lastSelector != selector) {
                         // update last selector slot position info
@@ -180,6 +199,7 @@ library LibDiamond {
                     // "oldSelectorCount >> 3" is a gas efficient division by 8 "oldSelectorCount / 8"
                     oldSelectorsSlotCount = oldSelectorCount >> 3;
                     // "oldSelectorCount & 7" is a gas efficient modulo by eight "oldSelectorCount % 8" 
+                    // " << 5 is the same as multiplying by 32 ( * 32)
                     oldSelectorInSlotPosition = (oldSelectorCount & 7) << 5;
                 }
                 if (oldSelectorsSlotCount != selectorSlotCount) {
@@ -200,6 +220,10 @@ library LibDiamond {
                     delete ds.selectorSlots[selectorSlotCount];
                     _selectorSlot = 0;
                 }
+
+                unchecked {
+                    selectorIndex++;
+                }
             }
             _selectorCount = selectorSlotCount * 8 + selectorInSlotIndex;
         } else {
@@ -210,20 +234,20 @@ library LibDiamond {
 
     function initializeDiamondCut(address _init, bytes memory _calldata) internal {
         if (_init == address(0)) {
-            require(_calldata.length == 0, "LibDiamondCut: _init is address(0) but_calldata is not empty");
-        } else {
-            require(_calldata.length > 0, "LibDiamondCut: _calldata is empty but _init is not address(0)");
-            if (_init != address(this)) {
-                enforceHasContractCode(_init, "LibDiamondCut: _init address has no code");
-            }
-            (bool success, bytes memory error) = _init.delegatecall(_calldata);
-            if (!success) {
-                if (error.length > 0) {
-                    // bubble up the error
-                    revert(string(error));
-                } else {
-                    revert("LibDiamondCut: _init function reverted");
+            return;
+        }
+        enforceHasContractCode(_init, "LibDiamondCut: _init address has no code");        
+        (bool success, bytes memory error) = _init.delegatecall(_calldata);
+        if (!success) {
+            if (error.length > 0) {
+                // bubble up error
+                /// @solidity memory-safe-assembly
+                assembly {
+                    let returndata_size := mload(error)
+                    revert(add(32, error), returndata_size)
                 }
+            } else {
+                revert InitializationFunctionReverted(_init, _calldata);
             }
         }
     }

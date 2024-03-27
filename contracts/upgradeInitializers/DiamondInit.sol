@@ -16,11 +16,11 @@ import { IERC165 } from "../interfaces/IERC165.sol";
 import { IERC20 } from "contracts/solidstate-solidity/token/ERC20/IERC20.sol";
 import {ERC20MetadataStorage } from 'contracts/solidstate-solidity/token/ERC20/metadata/ERC20Metadata.sol';
 
-// It is exapected that this contract is customized if you want to deploy your diamond
+// It is expected that this contract is customized if you want to deploy your diamond
 // with data from a deployment script. Use the init function to initialize state variables
 // of your diamond. Add parameters to the init funciton if you need to.
 
-contract DiamondInit {    
+contract DiamondInit {
     using ERC20MetadataStorage for ERC20MetadataStorage.Layout;
 
     // You can add parameters to this function in order to pass in 
@@ -46,6 +46,4 @@ contract DiamondInit {
         l.setSymbol(symbol);
         l.setDecimals(decimals);
     }
-
-
 }

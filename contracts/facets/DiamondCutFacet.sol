@@ -9,6 +9,9 @@ pragma solidity ^0.8.0;
 import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
 import { LibDiamond } from "../libraries/LibDiamond.sol";
 
+// Remember to add the loupe functions from DiamondLoupeFacet to the diamond.
+// The loupe functions are required by the EIP2535 Diamonds standard
+
 contract DiamondCutFacet is IDiamondCut {
     /// @notice Add/replace/remove any number of functions and optionally execute
     ///         a function with delegatecall
@@ -34,7 +37,7 @@ contract DiamondCutFacet is IDiamondCut {
             selectorSlot = ds.selectorSlots[selectorCount >> 3];
         }
         // loop through diamond cut
-        for (uint256 facetIndex; facetIndex < _diamondCut.length; facetIndex++) {
+        for (uint256 facetIndex; facetIndex < _diamondCut.length; ) {
             (selectorCount, selectorSlot) = LibDiamond.addReplaceRemoveFacetSelectors(
                 selectorCount,
                 selectorSlot,
@@ -42,6 +45,10 @@ contract DiamondCutFacet is IDiamondCut {
                 _diamondCut[facetIndex].action,
                 _diamondCut[facetIndex].functionSelectors
             );
+
+            unchecked {
+                facetIndex++;
+            }
         }
         if (selectorCount != originalSelectorCount) {
             ds.selectorCount = uint16(selectorCount);
