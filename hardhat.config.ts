@@ -1,16 +1,16 @@
-
 /* global ethers task */
-require("@nomicfoundation/hardhat-toolbox");
+import { HardhatUserConfig } from "hardhat/config";
+import "@nomicfoundation/hardhat-toolbox";
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
-task('accounts', 'Prints the list of accounts', async () => {
-  const accounts = await ethers.getSigners()
+task("accounts", "Prints the list of accounts", async () => {
+  const accounts = await ethers.getSigners();
 
   for (const account of accounts) {
-    console.log(account.address)
+    console.log(account.address);
   }
-})
+});
 
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
@@ -18,12 +18,14 @@ task('accounts', 'Prints the list of accounts', async () => {
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
-module.exports = {
-  solidity: '0.8.25',
+const config: HardhatUserConfig = {
+  solidity: "0.8.25",
   settings: {
     optimizer: {
       enabled: true,
-      runs: 200
-    }
-  }
-}
+      runs: 200,
+    },
+  },
+};
+
+export default config;
